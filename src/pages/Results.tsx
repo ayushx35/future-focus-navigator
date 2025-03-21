@@ -4,10 +4,11 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowRight, Download, Share2, BookmarkPlus } from 'lucide-react';
+import { ArrowRight, Download, Share2, BookmarkPlus, FileText } from 'lucide-react';
 import TransitionWrapper from '@/components/TransitionWrapper';
 import CareerCard from '@/components/CareerCard';
 import Header from '@/components/Header';
+import SkillTag from '@/components/SkillTag';
 
 // Sample careers data
 const careerData = [
@@ -73,26 +74,74 @@ const careerData = [
   }
 ];
 
+// Extra careers that would match skills from a tech-oriented resume
+const techCareerData = [
+  {
+    id: 7,
+    title: "Frontend Developer",
+    description: "Build and implement user interfaces for websites and web applications.",
+    matchScore: 95,
+    salary: "$70,000 - $130,000",
+    growth: "15% (Faster than average)",
+    education: "Bachelor's degree",
+    industries: ["Technology", "E-commerce", "Marketing", "Media", "Finance"]
+  },
+  {
+    id: 8,
+    title: "UX Researcher",
+    description: "Study user behaviors and needs to inform the design of products and services.",
+    matchScore: 93,
+    salary: "$80,000 - $135,000",
+    growth: "13% (Faster than average)",
+    education: "Bachelor's or Master's degree",
+    industries: ["Technology", "Healthcare", "Finance", "E-commerce", "Education"]
+  }
+];
+
 const Results = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [careerOptions, setCareerOptions] = useState(careerData);
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
+  const [resumeSkills, setResumeSkills] = useState<string[]>([]);
+  const [isUsingResumeData, setIsUsingResumeData] = useState(false);
   
   // Check if we have answers from the assessment
   useEffect(() => {
+    // Load resume skills from location state or sessionStorage
+    const skillsFromState = location.state?.resumeSkills || [];
+    const skillsFromStorage = JSON.parse(sessionStorage.getItem('resumeSkills') || '[]');
+    const combinedSkills = [...skillsFromState, ...skillsFromStorage].filter(
+      (skill, index, self) => self.indexOf(skill) === index
+    );
+    
+    setResumeSkills(combinedSkills);
+    setIsUsingResumeData(combinedSkills.length > 0);
+    
     if (location.state?.answers) {
       setUserAnswers(location.state.answers);
       
       // Simulate an API call or processing
       const timer = setTimeout(() => {
+        if (combinedSkills.length > 0) {
+          // If we have resume skills, add tech career recommendations
+          setCareerOptions([...techCareerData, ...careerData]);
+        }
+        setIsLoading(false);
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    } else if (combinedSkills.length > 0) {
+      // If we only have resume data but no assessment answers
+      const timer = setTimeout(() => {
+        setCareerOptions([...techCareerData, ...careerData]);
         setIsLoading(false);
       }, 1500);
       
       return () => clearTimeout(timer);
     } else {
-      // If we don't have answers, redirect to assessment
+      // If we don't have answers or resume data, redirect to assessment
       navigate('/assessment');
     }
   }, [location.state, navigate]);
@@ -172,7 +221,8 @@ const Results = () => {
                     <div className="text-primary font-medium mb-2">Your Personal Results</div>
                     <h1 className="text-3xl font-bold mb-2">Career Recommendations</h1>
                     <p className="text-muted-foreground max-w-xl">
-                      Based on your assessment, we've identified these career paths that align with your skills,
+                      Based on your {isUsingResumeData ? 'resume and ' : ''}
+                      assessment, we've identified these career paths that align with your skills,
                       interests, and values.
                     </p>
                   </div>
@@ -193,6 +243,32 @@ const Results = () => {
                   </div>
                 </div>
               </motion.div>
+              
+              {isUsingResumeData && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  className="glass-panel rounded-xl p-6 mb-8"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="bg-primary/10 p-3 rounded-full">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-2">Resume Skills Incorporated</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Your recommendations are enhanced with these skills from your resume:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {resumeSkills.map((skill, index) => (
+                          <SkillTag key={index} skill={skill} removable={false} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
               
               <div className="mb-10">
                 <Tabs defaultValue="recommended" className="w-full">

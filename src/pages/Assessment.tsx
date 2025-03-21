@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import TransitionWrapper from '@/components/TransitionWrapper';
 import AssessmentQuestion from '@/components/AssessmentQuestion';
 import Header from '@/components/Header';
+import SkillTag from '@/components/SkillTag';
 
 // Sample assessment questions
 const assessmentQuestions = [
@@ -67,8 +68,15 @@ const Assessment = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [progress, setProgress] = useState(0);
+  const [resumeSkills, setResumeSkills] = useState<string[]>([]);
   
   useEffect(() => {
+    // Load resume skills from sessionStorage if available
+    const storedSkills = sessionStorage.getItem('resumeSkills');
+    if (storedSkills) {
+      setResumeSkills(JSON.parse(storedSkills));
+    }
+    
     // Calculate progress as a percentage
     const progressValue = (Object.keys(answers).length / assessmentQuestions.length) * 100;
     setProgress(progressValue);
@@ -86,7 +94,12 @@ const Assessment = () => {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
       // When all questions are answered, navigate to results
-      navigate('/results', { state: { answers } });
+      navigate('/results', { 
+        state: { 
+          answers,
+          resumeSkills 
+        } 
+      });
     }
   };
   
@@ -99,6 +112,20 @@ const Assessment = () => {
         <main className="min-h-screen pt-24 px-6">
           <div className="max-w-3xl mx-auto">
             <section className="py-8">
+              {resumeSkills.length > 0 && (
+                <div className="glass-panel rounded-xl p-6 mb-8">
+                  <h3 className="text-md font-medium mb-3">Skills from Your Resume</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    These skills from your resume will be considered in your recommendations:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {resumeSkills.map((skill, index) => (
+                      <SkillTag key={index} skill={skill} removable={false} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            
               <div className="mb-12">
                 <div className="flex justify-between items-center mb-3">
                   <div className="text-sm text-muted-foreground">
@@ -144,7 +171,12 @@ const Assessment = () => {
                 >
                   {isLastQuestion && Object.keys(answers).length === assessmentQuestions.length && (
                     <Button
-                      onClick={() => navigate('/results', { state: { answers } })}
+                      onClick={() => navigate('/results', { 
+                        state: { 
+                          answers,
+                          resumeSkills
+                        } 
+                      })}
                     >
                       View Results
                     </Button>
